@@ -1,8 +1,10 @@
 package main
 
 import (
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"testing"
 
@@ -17,8 +19,8 @@ func TestMainHandler_StatusOkAndBodyNotEmpty(t *testing.T) {
 	handler := http.HandlerFunc(mainHandle)
 	handler.ServeHTTP(responseRecorder, req)
 
-	assert.Equal(t, http.StatusOK, responseRecorder.Code)
-	assert.NotEmpty(t, responseRecorder.Body.String())
+	require.Equal(t, http.StatusOK, responseRecorder.Code)
+	assert.NotEmpty(t, responseRecorder.Body)
 }
 
 // Проверка неподдерживаемого города
@@ -29,7 +31,7 @@ func TestMainHandler_WrongCity(t *testing.T) {
 	handler := http.HandlerFunc(mainHandle)
 	handler.ServeHTTP(responseRecorder, req)
 
-	assert.Equal(t, http.StatusBadRequest, responseRecorder.Code)
+	require.Equal(t, http.StatusBadRequest, responseRecorder.Code)
 	assert.Equal(t, responseRecorder.Body.String(), "wrong city value")
 }
 
@@ -42,10 +44,15 @@ func TestMainHandler_WhenCountMoreThanTotal(t *testing.T) {
 	handler := http.HandlerFunc(mainHandle)
 	handler.ServeHTTP(responseRecorder, req)
 
+	assert.Equal(t, http.StatusOK, responseRecorder.Code)
+
 	checkCafeString := "Мир кофе,Сладкоежка,Кофе и завтраки,Сытый студент"
+	expected := strings.Split(checkCafeString, ",")
+	actual := strings.Split(responseRecorder.Body.String(), ",")
 
-	list := strings.Split(responseRecorder.Body.String(), ",")
+	sort.Strings(expected)
+	sort.Strings(actual)
 
-	assert.GreaterOrEqual(t, totalCount, (len(list)))
-	assert.Equal(t, responseRecorder.Body.String(), checkCafeString)
+	assert.Equal(t, expected, actual)
+	assert.GreaterOrEqual(t, len(actual), totalCount)
 }
